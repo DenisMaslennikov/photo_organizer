@@ -1,8 +1,6 @@
 import os.path
 from copy import deepcopy
 
-# TODO Отдельная функция удаления элемента из списка.
-
 
 def print_numerated_list(printing_list: list):
     """Printing numerated list, start from 1."""
@@ -14,19 +12,6 @@ def greetings() -> None:
     """Print greetings."""
     print('Приветствую юный и неосторожный %username% я помогу тебе '
           'организовать твои картинки!')
-
-
-def print_main_menu() -> None:
-    """Print main menu."""
-    print()
-    print('1. Управление каталогами')
-    print('2. Управление расширениями')
-    print('3. Сканировать каталоги')
-    print('4. "Работа" с изображениями')
-    print('5. Сохранить настройки')
-    print('6. Сохранить базу тегов')
-
-    print('0. Выход')
 
 
 def manage_folders(folders: list[str]) -> list[str]:
@@ -48,12 +33,12 @@ def manage_folders(folders: list[str]) -> list[str]:
         match select_option:
 
             case '1':
-                new_folder: str = ''
-                while new_folder != '0':
-                    new_folder = input('Введите новый каталог. 0 для '
-                                       'выхода: ').lower()
-                    if (os.path.exists(new_folder)
-                            and os.path.isdir(new_folder)):
+                user_choose: str = ''
+                while user_choose != '0':
+                    user_choose = input('Введите новый каталог. 0 для '
+                                        'выхода: ').lower()
+                    new_folder = os.path.abspath(user_choose)
+                    if (os.path.isdir(new_folder)):
                         if (new_folder not in copy_folders):
                             copy_folders.append(new_folder)
                             print(f'Добавлен каталог {new_folder}')
@@ -108,11 +93,11 @@ def manage_extensions(extensions: list[str]) -> list[str]:
                             and new_extension != '0'):
                         if (new_extension.startswith('.')
                                 and len(new_extension) > 1):
-                            copy_extensions.append(new_extension)
+                            copy_extensions.append(new_extension.lstrip('.'))
                             print(f'Добавлено расширение {new_extension}')
                         else:
-                            print('Введено неправильное значение. Расширение'
-                                  ' должно начинаться с "." и содержать '
+                            print('Введено неправильное значение. Расширение '
+                                  'должно начинаться с "." и содержать '
                                   'минимум 2 символа')
                     elif new_extension == '0':
                         pass
@@ -138,9 +123,9 @@ def manage_extensions(extensions: list[str]) -> list[str]:
     return copy_extensions
 
 
-def image_process(image_db: list[dict[str, list[str]]],
+def image_process(image_db: dict[str, dict[str, list[str]]],
                   in_place: bool = False
-                  ) -> list[dict[str, list[str]]]:
+                  ) -> dict[str, dict[str, list[str]]]:
     """Image management. View, remove/add tags."""
     if in_place:
         copy_image_db = image_db
@@ -172,36 +157,41 @@ def image_process(image_db: list[dict[str, list[str]]],
                     print('Введено неправильное значение. Введите только '
                           'числа через пробел.')
                 else:
-                    for index in images_index:
-                        try:
-                            copy_image_db[index - 1]['tags'].append(tag)
-                        except IndexError:
-                            print(f'Нет изображения {index}')
+                    images_index.sort()
+                    current_index = 0
+                    for index, image in enumerate(image_db):
+                        if index == images_index[current_index] - 1:
+                            image_db[image]['tags'].append(tag)
+                            if len(images_index) > current_index + 1:
+                                current_index += 1
+                            else:
+                                break
 
 
-def show_images(image_db: list[dict[str, list[str]]],
+def show_images(image_db: dict[str, dict[str, list[str]]],
                 tag: str = None,
                 only_show: bool = False) -> None:
     """Print numerated images list."""
     select_option: str = ''
+    max_index: int = 0
     while select_option != '0':
-        if tag:
-            for index, image in enumerate(image_db):
-                if tag in image['tags']:
-                    print(f'{index + 1: >3}. {image["path"]}\\{image["file"]} '
-                          f'\n Tags: {*image["tags"],}')
-
-        else:
-            for index, image in enumerate(image_db):
-                print(f'{index + 1: >3}. {image["path"]}\\{image["file"]} '
-                      f'\n Tags: {*image["tags"],}')
+        for index, image in enumerate(image_db):
+            max_index = index + 1
+            if tag in image_db[image]['tags'] or not tag:
+                print(f'{index + 1: >3}. {image} '
+                      f'\n Tags: {*image_db[image]["tags"],}')
 
         if not only_show:
             select_option = input('Введите номер изображения. 0 для выхода: ')
             try:
-                if int(select_option) > 0:
-                    manage_image_tags(image_db[int(select_option) - 1],
-                                      in_place=True)
+                if 0 < int(select_option) <= max_index:
+                    for index, image in enumerate(image_db):
+                        if index == int(select_option) - 1:
+                            manage_image_tags(image, image_db[image]['tags'],
+                                              in_place=True)
+                            break
+                elif '0' == select_option:
+                    pass
                 else:
                     raise IndexError()
 
@@ -213,17 +203,17 @@ def show_images(image_db: list[dict[str, list[str]]],
             select_option = '0'
 
 
-def manage_image_tags(image: dict, in_place: bool = False) -> dict:
+def manage_image_tags(image: str, tags: list, in_place: bool = False) -> dict:
     """Add/remove tags for single image."""
     if in_place:
-        copy_image = image
+        copy_tags = tags
     else:
-        copy_image = deepcopy(image)
+        copy_tags = tags.copy()
     select_option: str = ''
     while select_option != '0':
         print('Выбранное изображение:')
-        print(f'{copy_image["path"]}\\{copy_image["file"]} '
-              f'\nTags: {*copy_image["tags"],}')
+        print(f'{image} '
+              f'\nTags: {*copy_tags,}')
         print()
         print('1. Добавить тег')
         print('2. Удалить тег')
@@ -235,10 +225,10 @@ def manage_image_tags(image: dict, in_place: bool = False) -> dict:
                 new_tag = ''
                 while new_tag != '0':
                     new_tag = input('Введите тег. 0 для выхода: ')
-                    if (new_tag not in copy_image['tags']
+                    if (new_tag not in copy_tags
                             and new_tag != '0'
                             and new_tag != ''):
-                        copy_image["tags"].append(new_tag)
+                        copy_tags.append(new_tag)
                         print(f'Добавлен тег {new_tag}')
                     elif new_tag == '0' or new_tag == '':
                         pass
@@ -247,12 +237,12 @@ def manage_image_tags(image: dict, in_place: bool = False) -> dict:
             case '2':
                 del_me = ''
                 while del_me != 0:
-                    print_numerated_list(copy_image['tags'])
+                    print_numerated_list(copy_tags)
                     try:
                         del_me = int(input('Введите номер тега который '
                                            'надо удалить. 0 для выхода: '))
                         if del_me > 0:
-                            del copy_image['tags'][del_me - 1]
+                            del copy_tags[del_me - 1]
                         else:
                             raise IndexError
                     except IndexError:
@@ -261,5 +251,5 @@ def manage_image_tags(image: dict, in_place: bool = False) -> dict:
                         print('Введено неправильное значение. Введите число.')
 
             case '3':
-                copy_image['tags'] = []
-    return copy_image
+                copy_tags = []
+    return copy_tags
