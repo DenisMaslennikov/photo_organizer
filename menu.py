@@ -4,8 +4,9 @@ from copy import deepcopy
 
 def print_numerated_list(printing_list: list):
     """Printing numerated list, start from 1."""
+    max_len = len(str(len(printing_list) + 1))
     for index, item in enumerate(printing_list):
-        print(f'{index + 1: >3}. {item}')
+        print(f'{index + 1: >{max_len}}. {item}')
 
 
 def greetings() -> None:
@@ -174,11 +175,12 @@ def show_images(image_db: dict[str, dict[str, list[str]]],
     """Print numerated images list."""
     select_option: str = ''
     max_index: int = 0
+    max_len = len(str(len(image_db) + 1))
     while select_option != '0':
         for index, image in enumerate(image_db):
             max_index = index + 1
             if tag in image_db[image]['tags'] or not tag:
-                print(f'{index + 1: >3}. {image} '
+                print(f'{index + 1: >{max_len}}. {image} '
                       f'\n Tags: {*image_db[image]["tags"],}')
 
         if not only_show:
