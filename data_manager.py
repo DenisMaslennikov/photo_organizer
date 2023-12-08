@@ -66,8 +66,7 @@ def scan_folders(folders: list[str],
         else:
             copy_image_db[key] = {'tags': [os.path.split(new_image[0])[-1]]}
 
-    tags_db = generate_tags(copy_image_db)
-    return copy_image_db, tags_db
+    return copy_image_db
 
 
 def generate_tags(image_db: dict[str, list[str]]) -> dict[str, list[str]]:
